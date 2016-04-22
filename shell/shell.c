@@ -1,3 +1,5 @@
+#include <error.h>
+#include <errno.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +13,13 @@
 
 #define GETTOK(str) strtok(str, " \n")
 #define MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+
+#define EXECUTE_ERROR(code, text) \
+  { \
+    error(0, code, text); \
+    path = NULL; \
+    break; \
+  } \
 
 int exec(const char *path, char **args, int in, int out) {
   pid_t pid = fork();
@@ -48,6 +57,7 @@ int execute(char *command) {
   const char *token;
   int stat_loc;
   int in = STDIN_FILENO, out = STDOUT_FILENO;
+  int fd;
 
   path = NULL; 
   args = (args_t *) malloc(sizeof(args_t));
@@ -56,10 +66,20 @@ int execute(char *command) {
   while (token != NULL) {
     if (strcmp(token, "<") == 0) {
       token = GETTOK(NULL);
-      in = open(token, O_RDONLY);
+      if (token == NULL)
+        EXECUTE_ERROR(0, "no redirection destination");
+      if ((fd = open(token, O_RDONLY)) != -1)
+        in = fd;
+      else
+        EXECUTE_ERROR(errno, "could not open input file");
     } else if (strcmp(token, ">") == 0) {
       token = GETTOK(NULL);
-      out = open(token, O_WRONLY | O_CREAT | O_TRUNC, MODE);
+      if (token == NULL)
+        EXECUTE_ERROR(0, "no redirection destination");
+      if ((fd = open(token, O_WRONLY | O_CREAT | O_TRUNC, MODE)) != -1)
+        out = fd;
+      else
+        EXECUTE_ERROR(errno, "could not open output file");
     } else if (strcmp(token, "|") == 0) {
       int pipe_fds[2];
       pipe(pipe_fds);
@@ -90,13 +110,13 @@ int execute(char *command) {
   if (path != NULL) {
     int pid = exec(path, args->argv, in, out);
     waitpid(pid, &stat_loc, 0);
-    args_exterminate(args);
   }
   if (in != STDIN_FILENO)
     close(in);
   if (out != STDOUT_FILENO)
     close(out);
 
+  args_exterminate(args);
   free(args);
 
   return 0;
@@ -110,7 +130,9 @@ int main() {
     fputs("$ ", stdout);
     size = get_line(&line, stdin);
     execute(line);
+    free(line);
   } while(!feof(stdin));
+  fputc('\n', stdout);
 
   return EXIT_SUCCESS;
 }
