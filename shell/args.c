@@ -30,5 +30,4 @@ void args_exterminate(args_t *args) {
 
   for (i = 0; i < args->argc; ++i)
     free(args->argv[i]);
-  free(args);
 }
