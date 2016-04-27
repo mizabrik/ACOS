@@ -109,14 +109,14 @@ int main(int argc, char *argv[]) {
   snprintf(sem_second_name, 255, "%s%s", SEM_SECOND_PROCESS, argv[1]);
 	printf("%s", sem_write_name);*/
 
+	errno = 0;
   if(process_number == 0) {
 		sem_unlink(sem_write_name);
   	sem_unlink(sem_first_name);
   	sem_unlink(sem_second_name);
-		sem_write = sem_open(sem_write_name, O_CREAT, 0600, 0);
-		perror("sem_write");
-		sem_first = sem_open(sem_first_name, O_CREAT, 0600, 0);
-		sem_second = sem_open(sem_second_name, O_CREAT, 0600, 0);
+		sem_write = sem_open(sem_write_name, O_CREAT | O_EXCL, 0600, 0);
+		sem_first = sem_open(sem_first_name, O_CREAT | O_EXCL, 0600, 0);
+		sem_second = sem_open(sem_second_name, O_CREAT | O_EXCL, 0600, 0);
   } else {
 		sem_write = sem_open(sem_write_name, 0);
 		sem_first = sem_open(sem_first_name, 0);
