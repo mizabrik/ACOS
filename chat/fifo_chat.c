@@ -139,6 +139,11 @@ int main(int argc, char *argv[]) {
 		unlink(argv[1]);
 	}
 
+	if (errno) {
+			perror(EXIT_FAILURE, 0, "Problems with synchronisation.");
+			errno = 0;
+	}
+
   struct my_fifo *fifo;
 	fifo = (struct my_fifo*) malloc (sizeof(struct my_fifo));
   fifo->sem_write = sem_write;
