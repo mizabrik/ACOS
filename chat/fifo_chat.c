@@ -52,17 +52,14 @@ struct my_fifo {
 static void *read_from_fifo(void *void_ptr) {
   struct my_fifo *fifo;
   fifo = (struct my_fifo*) void_ptr;
-  //printf("read thread: sem_write(%p), sem_read(%p)\n", fifo->sem_write, fifo->sem_read);
   do {
 	sem_wait(fifo->sem_read);
-	char* c;
-	c = (char*) malloc(1);
-	read(fifo->fifo_fd, c, 1);
-	putchar(c[0]);
-	if(c[0] == '\n') {
+	char c;
+	read(fifo->fifo_fd, &c, 1);
+	putchar(c);
+	if(c == '\n') {
 	  sem_post(fifo->sem_write);
 	}
-	free(c);
   } while(1);//!feof(stdin));
 
   return NULL;
@@ -89,14 +86,11 @@ int main(int argc, char *argv[]) {
 	  error(EXIT_FAILURE, 0, "Something wrong with %s.", argv[1]);
   }
 
-  //printf("%d\n", process_number);
-
   if(process_number == 0) {
   	mkfifo(argv[1], 0600);
   }
 
   errno = 0;
-	// printf("%d\n", process_number);
 
   fifo_fd = open(argv[1], O_RDWR, O_CREAT);
   if (errno != 0 && errno != EEXIST) {
@@ -114,7 +108,6 @@ int main(int argc, char *argv[]) {
   snprintf(sem_write_name, 255, "%s%s", SEM_WRITE, argv[1]);
   snprintf(sem_first_name, 255, "%s%s", SEM_FIRST_PROCESS, argv[1]);
   snprintf(sem_second_name, 255, "%s%s", SEM_SECOND_PROCESS, argv[1]);
-  //printf("%s", sem_write_name);
 
   errno = 0;
   if(process_number == 0) {
@@ -150,7 +143,6 @@ int main(int argc, char *argv[]) {
 	}
   }
   errno = 0;
-  //printf("write thread: sem_write(%p), sem_first(%p), sem_second(%p)\n", sem_write, sem_first, sem_second);
 
   struct my_fifo *fifo;
   fifo = (struct my_fifo*) malloc (sizeof(struct my_fifo));
@@ -171,20 +163,19 @@ int main(int argc, char *argv[]) {
   do {
 	char* str;
 	get_line(&str, stdin);
-	//printf(str);
 	sem_wait(sem_write);
-	char c[1];
+	char* c = str;
 	int i;
 	for(i = 0; i < strlen(str); ++i) {
-	  c[0] = str[i];
 	  write(fifo_fd, c, 1);
+	  ++c;
 	  if(process_number == 0) {
 		sem_post(sem_second);
 	  } else {
 		sem_post(sem_first);
 	  }
 	}
-	c[0] = '\n';
+	*c = '\n';
 	write(fifo_fd, c, 1);
 	if(process_number == 0) {
 	  sem_post(sem_second);
@@ -192,10 +183,6 @@ int main(int argc, char *argv[]) {
 	  sem_post(sem_first);
 	}
 	int t;
-	/*sem_getvalue(sem_first, &t);
-	printf("sem_first: %d\n", t);
-	sem_getvalue(sem_second, &t);
-	printf("sem_second: %d\n", t);*/
   } while(1);//!feof(stdin));
 
   sem_close(sem_write);
