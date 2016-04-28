@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
       sem_post(sem_first);
     }
     int t;
-  } while(1);//!feof(stdin));
+  } while(!feof(stdin));
 
   sem_close(sem_write);
   sem_close(sem_first);
