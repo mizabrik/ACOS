@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 
   errno = 0;
 
-  fifo_fd = open(argv[1], O_RDWR, O_CREAT);
+  fifo_fd = open(argv[1], O_RDWR, 0);
   if (errno != 0 && errno != EEXIST) {
     error(EXIT_FAILURE, 0, "Cannot open %s", argv[1]);
   }
@@ -111,10 +111,6 @@ int main(int argc, char *argv[]) {
 
   errno = 0;
   if(process_number == 0) {
-    sem_unlink(sem_write_name);
-    sem_unlink(sem_first_name);
-    sem_unlink(sem_second_name);
-    errno = 0;
     sem_write = sem_open(sem_write_name, O_CREAT | O_EXCL, 0600, 0);
     sem_first = sem_open(sem_first_name, O_CREAT | O_EXCL, 0600, 0);
     sem_second = sem_open(sem_second_name, O_CREAT | O_EXCL, 0600, 0);
@@ -137,7 +133,7 @@ int main(int argc, char *argv[]) {
     sem_unlink(sem_write_name);
     sem_unlink(sem_first_name);
     sem_unlink(sem_second_name);
-    unlink(argv[1]);
+	unlink(argv[1]);
     if(not_correct_values || errno) {
       error(EXIT_FAILURE, 0, "Problems with synchronisation.");
     }
