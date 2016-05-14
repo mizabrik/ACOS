@@ -8,25 +8,24 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
-#include "args.h"
+#include "array.h"
+#include "command.h"
 #include "get_line.h"
 
-#define GETTOK(str) strtok(str, " \n")
-#define MODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
-
-#define EXECUTE_ERROR(code, text) \
-  { \
-    error(0, code, text); \
-    path = NULL; \
-    break; \
-  } \
-
-int exec(const char *path, char **args, int in, int out) {
+int exec(const char *path, char **args, int in, int out,
+         int *close_fds, int close_count) {
   pid_t pid = fork();
 
   if (pid == 0) {
     dup2(in, STDIN_FILENO);
     dup2(out, STDOUT_FILENO);
+
+    while (close_count) {
+      close(*close_fds);
+      ++close_fds;
+      --close_count;
+    }
+
     execvp(path, args);
     exit(EXIT_SUCCESS);
   }
@@ -34,12 +33,13 @@ int exec(const char *path, char **args, int in, int out) {
   return pid;
 }
 
-int exec_detached(const char *path, char **args, int in, int out) {
+int exec_detached(const char *path, char **args, int in, int out,
+                  int *close_fds, int close_count) {
   int res;
   pid_t pid = fork();
 
   if (pid == 0) {
-    int res = exec(path, args, in, out);
+    int res = exec(path, args, in, out, close_fds, close_count);
     exit(res);
   } else if (pid > 0) {
     int stat_loc;
@@ -51,85 +51,62 @@ int exec_detached(const char *path, char **args, int in, int out) {
   return res;
 }
 
-int execute(char *command) {
-  const char *path;
-  args_t *args;
-  const char *token;
+int execute_command(command_t command) {
+  int pid;
   int stat_loc;
-  int in = STDIN_FILENO, out = STDOUT_FILENO;
-  int fd;
+  int pipe_count;
+  int close_fds[4];
+  int close_count = 0;
+  int pipe_fds[2];
+  int i;
+  int in, out;
+  char **argv;
 
-  path = NULL; 
-  args = (args_t *) malloc(sizeof(args_t));
-  args_new(args);
-  token = GETTOK(command);
-  while (token != NULL) {
-    if (strcmp(token, "<") == 0) {
-      token = GETTOK(NULL);
-      if (token == NULL)
-        EXECUTE_ERROR(0, "no redirection destination");
-      if ((fd = open(token, O_RDONLY)) != -1)
-        in = fd;
-      else
-        EXECUTE_ERROR(errno, "could not open input file");
-    } else if (strcmp(token, ">") == 0) {
-      token = GETTOK(NULL);
-      if (token == NULL)
-        EXECUTE_ERROR(0, "no redirection destination");
-      if ((fd = open(token, O_WRONLY | O_CREAT | O_TRUNC, MODE)) != -1)
-        out = fd;
-      else
-        EXECUTE_ERROR(errno, "could not open output file");
-    } else if (strcmp(token, "|") == 0) {
-      int pipe_fds[2];
-      pipe(pipe_fds);
-      if (out != STDOUT_FILENO)
-        close(out);
-      out = pipe_fds[1];
-      exec_detached(path, args->argv, in, out);
+  if (command.output != STDOUT_FILENO)
+    close_fds[close_count++] = command.output;
+  if (command.input != STDIN_FILENO)
+    close_fds[close_count++] = command.input;
 
-      close(out);
-      out = STDOUT_FILENO;
-      if (in != STDIN_FILENO)
-        close(in);
-      in = pipe_fds[0];
+  in = command.input;
+  pipe_count = command.programs.size - 1;
+  for (i = 0; i < pipe_count; ++i) {
+    pipe(pipe_fds);
+    out = pipe_fds[1];
+    close_fds[close_count++] = pipe_fds[0];
+    close_fds[close_count++] = pipe_fds[1];
 
-      path = NULL;
-      args_exterminate(args);
-      args_new(args);
-    } else {
-      if (path == NULL)
-        path = token;
+    argv = (char **) ((array_t *) command.programs.data[i])->data;
+    exec_detached(argv[0], argv, in, out, close_fds, close_count);
 
-      args_add(args, token);
+    close(out);
+    --close_count;
+    if (i || in != STDIN_FILENO) {
+      close(in);
+      --close_count;
+      close_fds[close_count - 1] = close_fds[close_count]; /* move input fd */
     }
-     
-    token = GETTOK(NULL);
+    in = pipe_fds[0];
   }
-
-  if (path != NULL) {
-    int pid = exec(path, args->argv, in, out);
-    waitpid(pid, &stat_loc, 0);
-  }
-  if (in != STDIN_FILENO)
-    close(in);
+  out = command.output;
+  argv = (char **) ((array_t *) command.programs.data[i])->data;
+  pid = exec(argv[0], argv, in, out, close_fds, close_count);
   if (out != STDOUT_FILENO)
     close(out);
-
-  args_exterminate(args);
-  free(args);
+  waitpid(pid, &stat_loc, 0);
 
   return 0;
 }
 
 int main() {
+  command_t command;
   do {
     char *line;
     int size;
 
     fputs("$ ", stdout);
     size = get_line(&line, stdin);
-    execute(line);
+    if (size && !parse(&command, line))
+      execute_command(command);
     free(line);
   } while(!feof(stdin));
   fputc('\n', stdout);

@@ -1,5 +1,11 @@
 CFLAGS=-g
 
-shell: shell.o args.o get_line.o
+shell: shell.o array.o get_line.o command.o
 
-shell.o: args.h get_line.h
+shell.o: command.h array.h get_line.h
+
+array.o: array.h
+
+command.o: command.h array.h
+
+get_line.o: get_line.h
