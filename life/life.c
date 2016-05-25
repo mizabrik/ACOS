@@ -12,15 +12,15 @@ int life_new(life_t *life, int width, int height) {
 }
 
 int cell_id(life_t *life, int x, int y) {
-  if (x % life->width >= 0)
+  if (x >= 0)
     x = x % life->width;
   else
-    x = life->width - x % life->width;
+    x = life->width - abs(x) % life->width;
 
-  if (y % life->height >= 0)
+  if (y >= 0)
     y = y % life->height;
   else
-    y = life->height - y % life->height;
+    y = life->height - abs(y) % life->height;
 
   return y * life->width + x;
 }
@@ -48,7 +48,7 @@ char get_state(life_t *life, int x, int y) {
   cell = *get_cell(life, x, y);
   if (cell && (neighbours < 2 || 3 < neighbours)) {
     return 0;
-  } else if (!cell && neighbours == 3) {
+  } else if (neighbours == 3) {
     return 1;
   } else {
     return cell;
@@ -56,7 +56,9 @@ char get_state(life_t *life, int x, int y) {
 }
 
 void update_cell(life_t *life, life_t *old_life, int x, int y) {
-  life->field[cell_id(x, y)] = get_state(old_life, x, y);
+  char* cell;
+  cell = get_cell(life, x, y);
+  *cell = get_state(old_life, x, y);
 }
 
 int life_read(life_t *life, FILE *input) {
@@ -79,7 +81,7 @@ int life_read(life_t *life, FILE *input) {
   return 0;
 }
 
-int print_life(life_t *life, FILE *output) {
+int life_print(life_t *life, FILE *output) {
   int i, j;
 
   fprintf(output, "%dx%d\n", life->width, life->height);

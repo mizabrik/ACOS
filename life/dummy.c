@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   }
 
   int number_of_steps;
-  number_of_steps = strtol(argv[1]);
+  number_of_steps = atoi(argv[2]);
 
   FILE* file;
   file = fopen(argv[1], "r");
@@ -20,6 +20,7 @@ int main(int argc, char *argv[]) {
   if(rc < 0) {
     error(EXIT_FAILURE, 0, "Error reading from file");
   }
+  life_print(&life, stdout);
 
   int i;
   int x;
@@ -32,7 +33,9 @@ int main(int argc, char *argv[]) {
         update_cell(&updated_life, &life, x, y);
       }
     }
+    life = updated_life;
   }
+  life_print(&life,  stdout);
 
   return EXIT_SUCCESS;
 }
