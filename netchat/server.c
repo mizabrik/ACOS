@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in serv_addr, cli_addr;
     int n, rc, on, timeout;
 	struct pollfd fds[200];
+	int fd_to_close[200];
 	int nfds, current_size, i, j;
 	nfds = 1;
 	current_size = 1;
@@ -68,10 +69,11 @@ int main(int argc, char *argv[])
 	listen(sockfd, 5);
 
 	memset(fds, 0, sizeof(fds));
+	memset(fd_to_close, 0, sizeof(fd_to_close));
 	fds[0].fd = sockfd;
 	fds[0].events = POLLIN;
 
-	timeout = 3 * 60 * 1000;
+	timeout = 1000;
 	
 	do {
 		printf("Waiting on poll()...\n");
@@ -81,10 +83,10 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		if(rc == 0) {
+		/*if(rc == 0) {
 			printf("poll() timed out");
 			break;
-		}
+		}*/
 
 		current_size = nfds;
 		for(i = 0; i < current_size; ++i) {
@@ -94,7 +96,7 @@ int main(int argc, char *argv[])
 
 			if(fds[i].revents != POLLIN) {
 				printf("revents = %d\n", fds[i].revents);
-				end_server = TRUE;
+				//end_server = TRUE;
 				break;
 			}
 
@@ -106,7 +108,7 @@ int main(int argc, char *argv[])
 					if(new_sockfd < 0) {
 						if(errno != EWOULDBLOCK) {
 							perror("ERROR accept()");
-							end_server = TRUE;
+							// end_server = TRUE;
 						}
 						break;
 					}
@@ -124,16 +126,16 @@ int main(int argc, char *argv[])
 					if(errno != EWOULDBLOCK) {
 						perror("recv() failed");
 						close_conn = TRUE;
+						fd_to_close[i] = TRUE;
 					} else {
 						printf("Get EWOULDBLOCK\n");
 					}
-					break;
 				}
 
 				if(rc == 0) {
 					printf("Connection closed");
 					close_conn = TRUE;
-					break;
+					fd_to_close[i] = TRUE;
 				}
 
 				len = rc;
@@ -142,6 +144,11 @@ int main(int argc, char *argv[])
 				for(j = 0; j < current_size; ++j) {
 					if(fds[j].fd != sockfd && i != j) {
 						rc = send(fds[j].fd, buffer, len, 0);
+						if(rc < 0) {
+							perror("send() failed");
+							close_conn = TRUE;
+							fd_to_close[j] = TRUE;
+						}
 					}
 				} 
 				/*do {
@@ -172,9 +179,13 @@ int main(int argc, char *argv[])
 					} 
 				} while(TRUE);*/
 				if(close_conn) {
-					close(fds[i].fd);
-					fds[i].fd = -1;
-					compress_array = TRUE;
+					for(j = 0; j < nfds; ++j) {
+						if(fd_to_close[j] == TRUE) {
+							close(fds[j].fd);
+							fds[j].fd = -1;
+							compress_array = TRUE;
+						}
+					}
 				}
 			}
 		}
@@ -184,6 +195,7 @@ int main(int argc, char *argv[])
 				if(fds[i].fd == -1) {
 					for(j = i; j < nfds; j++) {
 						fds[j].fd = fds[j+1].fd;
+						fd_to_close[j] = fd_to_close[j+1];
 					}
 					i--;
 					nfds--;
@@ -191,7 +203,7 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-	while(end_server == FALSE && !feof(stdin));
+	while(!feof(stdin));
 	
 	for(i = 0; i < nfds; i++) {
 		if(fds[i].fd >= 0) {
