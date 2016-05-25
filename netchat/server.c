@@ -9,9 +9,20 @@
 #include <sys/ioctl.h>
 #include <sys/poll.h>
 #include <sys/time.h>
+#include <signal.h>
 
 #define TRUE 1
 #define FALSE 0
+
+volatile sig_atomic_t finished = 0;
+
+void termination_handler(int sig) {
+	if(sig == SIGINT || sig == SIGTERM) {
+		finished = TRUE;
+	}
+
+	signal(sig, termination_handler);
+}
 
 void my_error(const char *msg)
 {
@@ -21,6 +32,9 @@ void my_error(const char *msg)
 
 int main(int argc, char *argv[])
 {
+	signal(SIGINT, termination_handler);
+	signal(SIGINT, termination_handler);
+
     int sockfd, new_sockfd, portno;
 	int len = -1;
 	int desc_ready, end_server, compress_array;
