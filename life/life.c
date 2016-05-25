@@ -55,10 +55,16 @@ char get_state(life_t *life, int x, int y) {
   }
 }
 
+void update_cell(life_t *life, life_t *old_life, int x, int y) {
+  life->field[cell_id(x, y)] = get_state(old_life, x, y);
+}
+
 int life_read(life_t *life, FILE *input) {
   int i, j;
-
-  fscanf(input, "%dx%d\n", &life->width, &life->height);
+  int width;
+  int height;
+  fscanf(input, "%dx%d\n", &width, &height);
+  life_new(life, width, height);
 
   for (i = 0; i < life->height; ++i) {
     for (j = 0; j < life->width; ++j) {
