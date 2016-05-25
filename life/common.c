@@ -19,9 +19,7 @@ void coordinator(life_t *life, life_t *tmp, unsigned steps, unsigned n_workers,
       sem_wait(ready);
 
     swap_lifes(tmp, life); 
-  }
-
-  swap_lifes(tmp, life); 
+  } 
 }
 
 void worker(worker_data_t *data) {
