@@ -44,6 +44,9 @@ int main(int argc, char **argv)
 
   struct input user_input = { 0 }, server_input = { 0 };
 
+  signal(SIGINT, termination_handler);
+  signal(SIGTERM, termination_handler);
+
   if (argc != 3) {
     error(0, 0, "usage: %s hostname port", argv[0]);
     result = EXIT_FAILURE;
@@ -126,6 +129,8 @@ void termination_handler(int sig) {
   if (sig == SIGINT || sig == SIGTERM) {
     finished = 1;
   }
+
+  signal(sig, termination_handler);
 }
 
 int get_addr(struct sockaddr_in *addr, const char *host, const char *port) {
