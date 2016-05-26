@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <error.h>
+
 #include "life.h"
+#include "common.h"
 
 int main(int argc, char *argv[]) {
   if(argc < 3) {
@@ -33,7 +35,7 @@ int main(int argc, char *argv[]) {
         update_cell(&updated_life, &life, x, y);
       }
     }
-    life = updated_life;
+    swap_lifes(&life, &updated_life);
   }
   life_print(&life,  stdout);
 
