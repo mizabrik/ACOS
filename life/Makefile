@@ -1,5 +1,7 @@
 CFLAGS = -g -Wall -Wextra
-LDLIBS = -lpthread
+LDLIBS = -lpthread -lrt
+
+all: threads forks dommy udp
 
 threads: threads.o life.o common.o
 

@@ -66,7 +66,8 @@ int life_read(life_t *life, FILE *input) {
   int width;
   int height;
   fscanf(input, "%dx%d\n", &width, &height);
-  life_new(life, width, height);
+  if (!life->field || life->width * life->height < width * height)
+    life->field = (char *) realloc(life->field, width * height * sizeof(char));
 
   for (i = 0; i < life->height; ++i) {
     for (j = 0; j < life->width; ++j) {
