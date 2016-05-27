@@ -7,7 +7,7 @@
 #include "life.h"
 
 void coordinator(life_t *life, life_t *tmp, unsigned steps, unsigned n_workers,
-                 sem_t* ready, sem_t **nexts) {
+                 sem_t* ready, sem_t *nexts) {
   unsigned step;
   unsigned i;
 
@@ -16,7 +16,7 @@ void coordinator(life_t *life, life_t *tmp, unsigned steps, unsigned n_workers,
   
   for (step = 0; step < steps; ++step) {
     for (i = 0; i < n_workers; ++i) {
-      sem_post(nexts[i]);
+      sem_post(&nexts[i]);
       //printf("sem_post(jobs)\n");
     }
     for (i = 0; i < n_workers; ++i) {

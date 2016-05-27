@@ -21,7 +21,7 @@ typedef struct worker_data worker_data_t;
 
 /* requires */
 void coordinator(life_t *life, life_t *tmp, unsigned steps, unsigned n_workers,
-                 sem_t *ready, sem_t **nexts);
+                 sem_t *ready, sem_t *nexts);
 
 void worker(struct worker_data *data);
 

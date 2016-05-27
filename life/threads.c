@@ -38,22 +38,16 @@ int main(int argc, char* argv[]) {
   life_new(&tmp, life.width, life.height);
 
   int i;
-  sem_t *ready;
-  sem_t *nexts[number_of_threads];
-  errno = 0;
-  ready = sem_open(READY_NAME, O_CREAT | O_EXCL, 0600, 0);
-  sem_unlink(READY_NAME);
-  if(errno) {
+  sem_t ready;
+  sem_t nexts[number_of_threads];
+  rc = sem_init(&ready, 0, 0);
+  if(rc != 0) {
     //perror("First");
     error(EXIT_FAILURE, 0, "Problems with syncronisation");
   }
   for(i = 0; i < number_of_threads; i++) {
-    char name[255];
-    snprintf(name, 255, "%s%d", NEXT_NAME, i);
-    errno = 0;
-    nexts[i] = sem_open(name, O_CREAT | O_EXCL, 0600, 0);
-    sem_unlink(name);
-    if(errno) {
+    rc = sem_init(&nexts[i], 0, 0);
+    if(rc != 0) {
       //perror("In cycle");
       error(EXIT_FAILURE, 0, "Problems with syncronisation");
     }
@@ -71,8 +65,8 @@ int main(int argc, char* argv[]) {
     wds[i]->y_begin = i*strings_on_thread;
     wds[i]->y_end = (i+1)*strings_on_thread;
     wds[i]->steps = number_of_steps;
-    wds[i]->next = nexts[i];
-    wds[i]->ready = ready;
+    wds[i]->next = &nexts[i];
+    wds[i]->ready = &ready;
     if(pthread_create(&threads[i], NULL, (void * (*)(void*))worker, wds[i]) != 0) {
       error(EXIT_FAILURE, 0, "Problems with threads");
     }
@@ -87,15 +81,18 @@ int main(int argc, char* argv[]) {
   wds[number_of_threads-1]->y_begin = (number_of_threads-1)*strings_on_thread;
   wds[number_of_threads-1]->y_end = (number_of_threads)*(strings_on_thread + life.height % number_of_threads);
   wds[number_of_threads-1]->steps = number_of_steps;
-  wds[number_of_threads-1]->next = nexts[number_of_threads-1];
-  wds[number_of_threads-1]->ready = ready;
+  wds[number_of_threads-1]->next = &nexts[number_of_threads-1];
+  wds[number_of_threads-1]->ready = &ready;
   if(pthread_create(&threads[number_of_threads-1], NULL, (void * (*)(void*))worker, wds[number_of_threads-1]) != 0) {
     error(EXIT_FAILURE, 0, "Problems with threads");
   }
 
-  coordinator(&life, &tmp, number_of_steps, number_of_threads, ready, nexts);
+  coordinator(&life, &tmp, number_of_steps, number_of_threads, &ready, nexts);
 
   life_print(&life, stdout);
+
+  life_destroy(&life);
+  life_destroy(&tmp);
 
   for(i = 0; i < number_of_threads-1; i++) {
     free(wds[i]);
