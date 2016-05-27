@@ -27,6 +27,7 @@ int main(int argc, char* argv[]) {
   number_of_steps = atoi(argv[3]);
   FILE *file = fopen(argv[1], "r");
   life_t life;
+  life.field = NULL;
   int rc;
   rc = life_read(&life, file);
   if(rc < 0) {
@@ -35,6 +36,7 @@ int main(int argc, char* argv[]) {
 
   life_print(&life, stdout);
   life_t tmp;
+  tmp.field = NULL;
   life_new(&tmp, life.width, life.height);
 
   int i;
