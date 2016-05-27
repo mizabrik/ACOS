@@ -1,7 +1,9 @@
 CFLAGS = -g -Wall -Wextra
 LDLIBS = -lpthread -lrt
 
-all: threads forks dommy udp
+EXECUATBLES=threads forks dummy udp
+
+all: $(EXECUATBLES)
 
 threads: threads.o life.o common.o
 
@@ -12,4 +14,5 @@ udp: udp.o life.o common.o
 dummy: dummy.o life.o common.o
 
 .PHONY :
-clean: $(RM) *.o dummy threads
+clean:
+	$(RM) *.o $(EXECUATBLES)
