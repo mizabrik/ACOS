@@ -7,12 +7,15 @@
 #include "life.h"
 
 void coordinator(life_t *life, life_t *tmp, unsigned steps, unsigned n_workers,
-                 sem_t* ready, sem_t *nexts) {
+                 sem_t* ready, sem_t *nexts, int *finished) {
   unsigned step;
   unsigned i;
 
   assert(n_workers > 0);
   //printf("steps: %d, n_workers: %d\n", steps, n_workers);
+  for(i = 0; i < n_workers; ++i) {
+    finished[i] = 0;
+  }
   
   for (step = 0; step < steps; ++step) {
     for (i = 0; i < n_workers; ++i) {
@@ -28,19 +31,20 @@ void coordinator(life_t *life, life_t *tmp, unsigned steps, unsigned n_workers,
 
     swap_lifes(tmp, life); 
   } 
+  for(i = 0; i < n_workers; ++i) {
+    finished[i] = 1;
+    sem_post(&nexts[i]);
+  }
 }
 
 void worker(worker_data_t *data) {
-  unsigned step;
   /*printf("steps: %d\n", data->steps);
   printf("y_begin: %d\n", data->y_begin);
   printf("y_end: %d\n", data->y_end);*/
-
-  for (step = 0; step < data->steps; ++step) {
+  
+  sem_wait(data->next);
+  while(!(*data->finished)) {
     int x, y;
-    //printf("sem_wait(data->next): start\n");
-    sem_wait(data->next);
-    //printf("sem_wait(data->next): done\n");
 
     //life_print(data->old, stdout);
     for (y = data->y_begin; y < data->y_end; ++y) {
@@ -53,6 +57,7 @@ void worker(worker_data_t *data) {
     }
 
     sem_post(data->ready);
+    sem_wait(data->next);
     //printf("sem_post(data->ready)\n");
   }
 }

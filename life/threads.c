@@ -58,6 +58,7 @@ int main(int argc, char* argv[]) {
   
   pthread_t threads[number_of_threads];
   struct worker_data *wds[number_of_threads];
+  int finished[number_of_threads];
 
   for(i = 0; i < number_of_threads-1; i++) {
     wds[i] = (struct worker_data*) malloc (sizeof(struct worker_data));
@@ -65,9 +66,9 @@ int main(int argc, char* argv[]) {
     wds[i]->old = &life;
     wds[i]->y_begin = i*strings_on_thread;
     wds[i]->y_end = (i+1)*strings_on_thread;
-    wds[i]->steps = number_of_steps;
     wds[i]->next = &nexts[i];
     wds[i]->ready = &ready;
+    wds[i]->finished = &finished[i];
     if(pthread_create(&threads[i], NULL, (void * (*)(void*))worker, wds[i]) != 0) {
       error(EXIT_FAILURE, 0, "Problems with threads");
     }
@@ -81,14 +82,14 @@ int main(int argc, char* argv[]) {
   wds[number_of_threads-1]->old = &life;
   wds[number_of_threads-1]->y_begin = (number_of_threads-1)*strings_on_thread;
   wds[number_of_threads-1]->y_end = (number_of_threads)*(strings_on_thread + life.height % number_of_threads);
-  wds[number_of_threads-1]->steps = number_of_steps;
   wds[number_of_threads-1]->next = &nexts[number_of_threads-1];
   wds[number_of_threads-1]->ready = &ready;
+  wds[number_of_threads-1]->finished = &finished[number_of_threads-1];
   if(pthread_create(&threads[number_of_threads-1], NULL, (void * (*)(void*))worker, wds[number_of_threads-1]) != 0) {
     error(EXIT_FAILURE, 0, "Problems with threads");
   }
 
-  coordinator(&life, &tmp, number_of_steps, number_of_threads, &ready, nexts);
+  coordinator(&life, &tmp, number_of_steps, number_of_threads, &ready, nexts, finished);
 
   life_print(&life, stdout);
 

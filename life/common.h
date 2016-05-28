@@ -10,7 +10,7 @@ struct worker_data {
   life_t *old;
   life_t *new;
 
-  unsigned steps;
+  int *finished;
   int y_begin;
   int y_end;
   sem_t *ready;
@@ -21,7 +21,7 @@ typedef struct worker_data worker_data_t;
 
 /* requires */
 void coordinator(life_t *life, life_t *tmp, unsigned steps, unsigned n_workers,
-                 sem_t *ready, sem_t *nexts);
+                 sem_t *ready, sem_t *nexts, int *finished);
 
 void worker(struct worker_data *data);
 
