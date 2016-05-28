@@ -31,10 +31,11 @@ struct coordinator_args {
   unsigned n_clients; 
   sem_t *ready; 
   sem_t *nexts;
+  int *finished;
 };
 
 void coordinator_thread(struct coordinator_args *args) {
-  coordinator(args->life, args->tmp, args->n_steps, args->n_clients, args->ready, args->nexts);
+  coordinator(args->life, args->tmp, args->n_steps, args->n_clients, args->ready, args->nexts, args->finished);
 }
 
 int udper(int sockfd, life_t *life, life_t *tmp, unsigned steps, unsigned n_clients, sem_t *ready, sem_t *nexts);
@@ -81,7 +82,8 @@ int main(int argc, char* argv[]) {
       error(EXIT_FAILURE, errno, "Problems with syncronisation");
     }
   }
-
+  
+  int finished[n_clients];
   struct coordinator_args args;
   args.life = &life;
   args.tmp = &tmp;
@@ -89,6 +91,7 @@ int main(int argc, char* argv[]) {
   args.n_clients = n_clients;
   args.ready = &ready;
   args.nexts = nexts;
+  args.finished = finished;
   pthread_t coordinator_pt;
   pthread_create(&coordinator_pt, NULL, (void * (*)(void*))coordinator_thread, &args);
 

@@ -55,14 +55,15 @@ int main(int argc, char **argv) {
   sem_init(&ready, 0, 0);
   sem_init(&next, 0, 0);
 
+  int finished = 0;
   worker_data_t data;
   data.new = &tmp;
   data.old = &life;
   data.y_begin = 2;
   data.y_end = life.height;
-  data.steps = -1;
   data.next = &next;
   data.ready = &ready;
+  data.finished = &finished;
   pthread_t worker_pt;
   pthread_create(&worker_pt, NULL, (void * (*)(void*))worker, &data);
 
@@ -75,6 +76,9 @@ int main(int argc, char **argv) {
     send_map(sockfd, id, &server, &life);
     ret = get_borders(sockfd, id, &server, &life);
   } while (!ret);
+
+  finished = 1;
+  sem_post(&next);
 
   sem_destroy(&next);
   sem_destroy(&ready);
