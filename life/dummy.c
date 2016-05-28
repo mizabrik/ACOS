@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
   FILE* file;
   file = fopen(argv[1], "r");
   life_t life;
+  life.field = NULL;
   int rc;
   rc = life_read(&life, file);
   if(rc < 0) {

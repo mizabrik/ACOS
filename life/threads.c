@@ -36,7 +36,6 @@ int main(int argc, char* argv[]) {
 
   life_print(&life, stdout);
   life_t tmp;
-  tmp.field = NULL;
   life_new(&tmp, life.width, life.height);
 
   int i;
@@ -96,11 +95,14 @@ int main(int argc, char* argv[]) {
   life_destroy(&life);
   life_destroy(&tmp);
 
-  for(i = 0; i < number_of_threads-1; i++) {
+  sem_destroy(&ready);
+
+  for(i = 0; i < number_of_threads; i++) {
     free(wds[i]);
+    sem_destroy(&nexts[i]);
   }
 
-  for(i = 0; i < number_of_threads-1; i++) {
+  for(i = 0; i < number_of_threads; i++) {
     if(pthread_join(threads[i], NULL) != 0) {
       error(EXIT_FAILURE, 0, "Can't join threads");
     }
