@@ -26,6 +26,7 @@ struct shared {
   char *field2;
   life_t *life;
   life_t *tmp;
+  int *finished;
 };
 
 int get_shm(int width, int height, unsigned n_workers, struct shared *mem) {
@@ -40,7 +41,8 @@ int get_shm(int width, int height, unsigned n_workers, struct shared *mem) {
   shm_unlink("/LifeWantsToBeUnique");
   length = 2 * sizeof(life_t) /* two lifes */
          + 2 * width * height /* two buffers */
-         + (n_workers + 1) * sizeof(sem_t); /* semaphores */
+         + (n_workers + 1) * sizeof(sem_t) /* semaphores */
+         + (n_workers) * sizeof(int); /* finished */
   ftruncate(fd, length);
   mem->base = (uint8_t *) mmap(NULL, length, prot, MAP_SHARED, fd, 0);
 
@@ -56,6 +58,8 @@ int get_shm(int width, int height, unsigned n_workers, struct shared *mem) {
   off += sizeof(life_t);
   mem->tmp = (life_t *) (mem->base + off);
   off += sizeof(life_t);
+  mem->finished = (int *) (mem->base + off);
+  off += sizeof(int) * n_workers;
   mem->length = length;
   close(fd);
 
@@ -122,7 +126,7 @@ int main(int argc, char **argv) {
     data[i].ready = mem.ready;
     data[i].y_begin = i * block_size;
     data[i].y_end = i + 1 == n_workers ? life->height : data[i].y_begin + block_size;
-    data[i].steps = steps;
+    data[i].finished = &mem.finished[i];
     pid = fork();
     if (pid > 0) {
       children[i] = pid;
@@ -133,7 +137,7 @@ int main(int argc, char **argv) {
   }
   data[n_workers - 1].y_end = life->height;
 
-  coordinator(life, tmp, steps, n_workers, mem.ready, mem.next);
+  coordinator(life, tmp, steps, n_workers, mem.ready, mem.next, mem.finished);
 
   for (i = 0; i < n_workers; ++i) {
     waitpid(children[i], NULL, 0);
