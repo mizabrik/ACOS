@@ -141,10 +141,12 @@ int main(int argc, char **argv) {
 
   life_print(life, stdout);
 
-  munmap(mem.base, mem.length);
 
 main_input:
+  munmap(mem.base, mem.length);
   fclose(input);
+  free(data);
+  free(children);
 main_none:
   return ret;
 }
