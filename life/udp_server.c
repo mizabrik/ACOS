@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <netinet/ip.h>
+#include <poll.h>
 
 #include "common.h"
 #include "life.h"
@@ -121,6 +122,9 @@ int udper(int sockfd, life_t *life, life_t *tmp, unsigned steps, unsigned n_clie
   unsigned step = 0;
   unsigned n_ready = 0;
   int finished = 0;
+  struct pollfd fds[1];
+  int rc;
+  int state = CONNECT;
 
   clients = (client_data_t *) malloc(sizeof(client_data_t) * n_clients);
   int block_size = life->height / n_clients;
@@ -135,24 +139,46 @@ int udper(int sockfd, life_t *life, life_t *tmp, unsigned steps, unsigned n_clie
   buffer_size += sizeof(struct msg_info);
   buffer = (struct msg *) malloc(buffer_size);
 
+  fds[0].fd = sockfd;
+  fds[0].events = POLLIN;
+  int timeout = 1000;
+
   while (!finished) {
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
     unsigned id;
+
+    rc = poll(fds, 1, timeout);
+    if(rc == 0) {
+      if(state != CONNECT) {
+        error(EXIT_FAILURE, 0, "Too long waiting");
+      }
+    }
     recvfrom(sockfd, buffer, buffer_size, 0, (struct sockaddr *) &addr, &addr_len);
     id = buffer->id;
 
     switch (buffer->type) {
       case MSG_INIT:
         if (n_connected < n_clients) {
-          clients[n_connected].addr = addr;
-          accept_client(sockfd, n_connected, life->width, life->height, addr);
-          ++n_connected;
+          int flag = 1;
+          for(i = 0; i < n_connected; ++i) {
+            if(clients[i].addr.sin_addr.s_addr == addr.sin_addr.s_addr && clients[i].addr.sin_port == addr.sin_port) {
+              accept_client(sockfd, n_connected, life->width, life->height, addr);
+              flag = 0;
+              break;
+            }
+          }
+          if(flag) {
+            clients[n_connected].addr = addr;
+            accept_client(sockfd, n_connected, life->width, life->height, addr);
+            ++n_connected;
+          }
         }
         break;
 
       case MSG_MAP_REQUEST:
         if (id < n_connected) {
+          state = SEND_MAP;
           send_map(sockfd, id, life, &clients[id]);
           send_borders(sockfd, id, life, &clients[id]);
         }
@@ -160,6 +186,7 @@ int udper(int sockfd, life_t *life, life_t *tmp, unsigned steps, unsigned n_clie
 
       case MSG_MAP_TRANSFER:
         if (id < n_connected && clients[id].ready == 0) {
+          state = GET_MAP;
           memcpy(tmp->field + cell_id(life, 0, clients[id].y_begin),
                  ((struct msg_map_transfer *) buffer)->map,
                  client_block_size(life, &clients[id]));
@@ -178,6 +205,7 @@ int udper(int sockfd, life_t *life, life_t *tmp, unsigned steps, unsigned n_clie
       if (step == steps) {
         finished = 1;
       } else {
+        state = SEND_UPDATES;
         for (i = 0; i < n_clients; ++i) {
           sem_wait(&nexts[i]);
           send_borders(sockfd, i, life, &clients[i]);

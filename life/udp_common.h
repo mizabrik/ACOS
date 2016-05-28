@@ -9,6 +9,13 @@ enum MSG_TYPES {
   MSG_MAP_BORDERS,
 };
 
+enum STATE {
+  CONNECT,
+  SEND_MAP,
+  GET_MAP,
+  SEND_UPDATES,
+};
+
 struct msg {
   int type;
   unsigned id;
