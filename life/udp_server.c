@@ -65,7 +65,6 @@ int main(int argc, char* argv[]) {
     error(EXIT_FAILURE, 0, "Can't read from file\n");
   }
 
-  life_print(&life, stdout);
   life_t tmp;
   tmp.field = NULL;
   life_new(&tmp, life.width, life.height);
@@ -170,7 +169,8 @@ int udper(int sockfd, life_t *life, life_t *tmp, unsigned steps, unsigned n_clie
           }
           if(flag) {
             clients[n_connected].addr = addr;
-            accept_client(sockfd, n_connected, life->width, life->height, addr);
+            int height = clients[n_connected].y_end - clients[n_connected].y_begin;
+            accept_client(sockfd, n_connected, life->width, height, addr);
             ++n_connected;
           }
         }
@@ -209,7 +209,9 @@ int udper(int sockfd, life_t *life, life_t *tmp, unsigned steps, unsigned n_clie
         for (i = 0; i < n_clients; ++i) {
           sem_wait(&nexts[i]);
           send_borders(sockfd, i, life, &clients[i]);
+          clients[i].ready = 0;
         }
+        n_ready = 0;
       }
     }
   }
