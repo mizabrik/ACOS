@@ -1,7 +1,7 @@
 CFLAGS = -g -Wall -Wextra
 LDLIBS = -lpthread -lrt
 
-EXECUATBLES=threads forks dummy udp
+EXECUATBLES=threads forks dummy udp_client udp_server
 
 all: $(EXECUATBLES)
 

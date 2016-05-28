@@ -71,10 +71,10 @@ int main(int argc, char **argv) {
     sem_post(&next);
     sem_wait(&ready);
 
+    swap_lifes(&life, &tmp);
     send_map(sockfd, id, &server, &life);
     ret = get_borders(sockfd, id, &server, &life);
-    swap_lifes(&life, &tmp);
-  } while (ret);
+  } while (!ret);
 
   sem_destroy(&next);
   sem_destroy(&ready);

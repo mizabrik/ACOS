@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
   int port;
 
   if(argc < 4) {
-    error(EXIT_FAILURE, 0, "usage: %s MAP PORT CLIENTS STEPS PORT", argv[0]);
+    error(EXIT_FAILURE, 0, "usage: %s MAP CLIENTS STEPS PORT", argv[0]);
   }
 
   n_clients = atoi(argv[2]);
@@ -141,7 +141,7 @@ int udper(int sockfd, life_t *life, life_t *tmp, unsigned steps, unsigned n_clie
 
   fds[0].fd = sockfd;
   fds[0].events = POLLIN;
-  int timeout = 1000;
+  int timeout = 5000;
 
   while (!finished) {
     struct sockaddr_in addr;
@@ -151,7 +151,7 @@ int udper(int sockfd, life_t *life, life_t *tmp, unsigned steps, unsigned n_clie
     rc = poll(fds, 1, timeout);
     if(rc == 0) {
       if(state != CONNECT) {
-        error(EXIT_FAILURE, 0, "Too long waiting");
+        //error(EXIT_FAILURE, 0, "Too long waiting");
       }
     }
     recvfrom(sockfd, buffer, buffer_size, 0, (struct sockaddr *) &addr, &addr_len);
@@ -259,8 +259,8 @@ ssize_t send_borders(int sockfd, unsigned id, life_t *life, client_data_t *clien
 
   borders->msg.type = MSG_MAP_BORDERS;
   borders->msg.id = id;
-  memcpy(borders->borders, life->field + cell_id(life, 0, client->y_begin - 1), life->width);
-  memcpy(borders->borders + life->width, life->field + cell_id(life, 0, client->y_end), life->width);
+  memcpy(borders->borders, life->field + cell_id(life, 0, client->y_end), life->width);
+  memcpy(borders->borders + life->width, life->field + cell_id(life, 0, client->y_begin - 1), life->width);
 
   return sendto(sockfd, borders, size, 0, (struct sockaddr *) &client->addr, sizeof(client->addr));
 }
