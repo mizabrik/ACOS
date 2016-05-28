@@ -11,6 +11,8 @@ forks: forks.o life.o common.o
 
 udp_server: udp_server.o life.o common.o
 
+udp_client: udp_client.o life.o common.o
+
 dummy: dummy.o life.o common.o
 
 .PHONY :
