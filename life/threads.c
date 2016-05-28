@@ -55,6 +55,11 @@ int main(int argc, char* argv[]) {
   }
 
   int strings_on_thread = life.height / number_of_threads;
+
+  if(strings_on_thread == 0) {
+    number_of_threads = life.height;
+    strings_on_thread = 1;
+  }
   
   pthread_t threads[number_of_threads];
   struct worker_data *wds[number_of_threads];
